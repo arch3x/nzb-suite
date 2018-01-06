@@ -3,115 +3,57 @@
 version: '2'
 
 services:
-  sabnzbd:
-    user: sabnzbd
-    image: wbvreeuwijk/sabnzbd:latest
-    container_name: nzb_sabnzbd
-    build: sabnzbd
-    dns: 192.168.100.9
-    networks:
-      - proxy
-    volumes:
-      - /volume2/downloads/complete:/downloads/complete
-      - download-incomplete:/downloads/incomplete
-      - /volume2/docker/config/sabnzbd:/config
-
-  sickrage:
-    user: sabnzbd
-    container_name: nzb_sickrage
-    image: wbvreeuwijk/sickrage:latest
-    depends_on:
-      - sabnzbd
-      - nzbmegasearch
-    build: sickrage
-    cpu_quota: 25000
-    dns: 192.168.100.9
+  mariadb:
+    container_name: mariadb
+    image: mariadb
+    environment:
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
+      - MYSQL_USER
+      - MYSQL_PASSWORD
     ports:
-      - 8082:8081
-    networks:
-      - proxy
-    volumes:
-      - /volume2/downloads/complete:/downloads/complete
-      - /volume2/video:/video
-      - /volume2/docker/config/sickrage:/config
-  
-#  sickbeard:
-#    user: sabnzbd
-#    container_name: nzb_sickbeard
-#    image: wbvreeuwijk/sickbeard:latest
-#    build: sickbeard
-#    dns: 192.168.100.9
-#    networks:
-#      - proxy
-#    volumes:
-#      - /volume2/downloads/complete:/downloads/complete
-#      - /volume2/video:/video
-#      - /volume2/docker/config/sickbeard:/config
+      - "3306:3306"
 
   couchpotato:
-    user: sabnzbd
     container_name: nzb_couchpotato
-    cpu_quota: 25000
     image: wbvreeuwijk/couchpotato:latest
-    depends_on:
-      - sabnzbd
-      - nzbmegasearch
     build: couchpotato
-    dns: 192.168.100.9
-    networks:
-      - proxy
+    ports:
+      - "5050:5050"
     volumes:
-      - /volume2/downloads/complete:/downloads/complete
-      - /volume2/video:/video
-      - /volume2/docker/config/couchpotato:/config
+      - couchpotato:/config
 
-  subliminal:
-    user: sabnzbd
-    container_name: nzb_subliminal
-    cpu_quota: 25000
-    image: wbvreeuwijk/subliminal:latest
-    build: subliminal
-    dns: 192.168.100.9
-    networks:
-      - proxy
-    volumes:
-      - /volume2/video:/video
-
-  nzbmegasearch:
-    image: wbvreeuwijk/nzbmegasearch:latest
-    container_name: nzb_nzbmegasearch
-    build: nzbmegasearch
-    dns: 192.168.100.9
-    networks:
-      - proxy
-    volumes:
-      - /volume2/docker/config/nzbmegasearch:/config
-      
   spotweb:
     image: wbvreeuwijk/spotweb:latest
     container_name: nzb_spotweb
-    cpu_quota: 25000
     build: spotweb
-    dns: 192.168.100.9
-    networks:
-      - proxy
     environment:
       - MYSQL_PORT_3306_TCP_ADDR
       - MYSQL_ENV_MYSQL_DATABASE
       - MYSQL_ENV_MYSQL_USER
       - MYSQL_ENV_MYSQL_PASSWORD
+    ports:
+      - "80:80"
     volumes:
-      - spotweb-cache:/var/www/html/spotweb/cache
+      - spotweb:/var/www/html/spotweb/cache
+    
+  home-assistant:
+    image: homeassistant/home-assistant:latest
+    container_name: home-assistant
+    environment:
+      - TZ
+    ports:
+      - "8123:8123"
+    volumes:
+      - home-assistant:/config 
+    network_mode: "host"
+     
 
 volumes:
-  download-complete:
+  couchpotato:
     driver: local
-  download-incomplete:
+  spotweb:
     driver: local
-  spotweb-cache:
+  home-assistant:
     driver: local
 
-networks:
-  proxy:
-    external:
-      name: nginx_backend

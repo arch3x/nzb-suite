@@ -1,0 +1,166 @@
+homeassistant:
+  # Name of the location where Home Assistant is running
+  name: Home
+  # Location required to calculate the time the sun rises and sets
+  latitude: 40.7089
+  longitude: -74.0012
+  # Impacts weather/sunrise data (altitude above sea level in meters)
+  elevation: 3
+  # metric for Metric, imperial for Imperial
+  unit_system: imperial
+  # Pick yours from here: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  time_zone: America/New_York
+
+# Show links to resources in log and frontend
+introduction:
+
+# Enables the frontend
+frontend:
+
+# Enables configuration UI
+config:
+
+http:
+  # Uncomment this to add a password (recommended!)
+  # api_password: PASSWORD
+  # Uncomment this if you are using SSL or running in Docker etc
+  # base_url: example.duckdns.org:8123
+
+# Checks for available updates
+# Note: This component will send some information about your system to
+# the developers to assist with development of Home Assistant.
+# For more information, please see:
+# https://home-assistant.io/blog/2016/10/25/explaining-the-updater/
+updater:
+
+# Discover some devices automatically
+discovery:
+  ignore:
+    - plex_mediaserver
+
+# Allows you to issue voice commands from the frontend in enabled browsers
+conversation:
+
+# Enables support for tracking state changes over time.
+history:
+
+# View all events in a logbook
+logbook:
+
+# Track the sun
+sun:
+
+amcrest:
+  - host: 172.17.13.30
+    username: admin
+    password: <password>
+    sensors:
+      - motion_detector
+      - sdcard
+      - ptz_preset
+
+# Weather Prediction
+sensor:
+  - platform: yr
+  - platform: amcrest
+
+camera:
+  - platform: amcrest
+
+# Text to speech
+tts:
+  platform: google
+
+device_tracker:
+  - platform: nmap_tracker
+    hosts: 172.17.13.0/24
+    home_interval: 30
+    interval_seconds: 60
+    consider_home: 180
+    track_new_devices: yes
+
+switch:
+  - platform: tplink
+    host: 172.17.13.230
+  - platform: tplink
+    host: 172.17.13.203
+
+notify:
+  - name: pushover
+    platform: pushover
+    api_key: <api_key>
+    user_key: <user_key>
+
+automation:
+
+  - alias: 'Motion Sensor'
+#    hide_entity: True
+    initial_state: 'off'
+    trigger:
+      platform: state
+      entity_id: sensor.amcrest_motion_detected
+    condition:
+      condition: time
+      after: '09:00:00'
+      before: '17:00:00'
+      weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+    action:
+      service: notify.pushover
+      data:
+          message: motion triggered!
+
+
+  - alias: 'Active Motion Sensor when Away'
+    trigger:
+      platform: state
+      entity_id: device_tracker.70ef008fecc6
+      from: 'home'
+      to: 'not_home'
+    condition:
+      condition: time
+      after: '09:00:00'
+      before: '17:00:00'
+      weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+    action:
+      - service: automation.turn_on
+        entity_id: automation.motion_sensor
+      - service: notify.pushover
+        data:
+           message: motion sensor activated
+
+  - alias: 'Disable Motion Sensor when Home'
+    trigger:
+      platform: state
+      entity_id: device_tracker.70ef008fecc6
+      from: 'not_home'
+      to: 'home'
+    condition:
+      condition: time
+      after: '09:00:00'
+      before: '17:00:00'
+      weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+    action:
+      - service: automation.turn_off
+        entity_id: automation.motion_sensor
+      - service: notify.pushover
+        data:
+           message: motion sensor deactivated
+
+
+
+#group: !include groups.yaml
